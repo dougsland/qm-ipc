@@ -61,7 +61,7 @@ WantedBy=sockets.target
 EOF
 
 if [[ -n "$EXTRA_VOLUME" ]]; then
-echo "Creating $EXTRA_VOLUME..."
+echo "Creating $EXTRA_VOLUME"
 cat <<EOF > "$EXTRA_VOLUME"
 [Unit]
 Requires=ipc_server
