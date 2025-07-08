@@ -154,16 +154,16 @@ else
   systemctl restart qm
   sleep 5
 
-  echo "systemctl daemon-reload inside qm..."
+  echo "qm: systemctl daemon-reload inside qm..."
   podman exec -it qm bash -c "systemctl daemon-reload"
 
-  echo "systemctl status ipc_client"
+  echo "qm: systemctl status ipc_client"
   podman exec -it qm bash -c "systemctl status ipc_client"
 
-  #echo "start ipc_client inside qm..."
-  #podman exec -it qm bash -c "podman restart systemd-ipc_client"
-  #sleep 15
+  echo "qm: restart ipc_client inside qm..."
+  podman exec -it qm bash -c "podman restart systemd-ipc_client"
+  sleep 15
 
-  echo "podman ps inside qm..."
+  echo "qm: podman ps inside qm..."
   podman exec -it qm bash -c "podman ps"
 fi
