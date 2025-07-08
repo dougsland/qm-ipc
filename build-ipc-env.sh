@@ -14,29 +14,37 @@ QMQM_SOCKET="/etc/qm/systemd/system/ipc_server.socket"
 QMQM_SERVER="/etc/qm/containers/systemd/ipc_server.container"
 QMQM_CLIENT="/etc/qm/containers/systemd/ipc_client.container"
 
-ASIL_SOCKET="/etc/qm/systemd/system/ipc_server.socket"
-ASIL_SERVER="/etc/qm/containers/systemd/ipc_server.container"
+ASIL_SOCKET="/etc/systemd/system/ipc_server.socket"
+ASIL_SERVER="/etc/containers/systemd/ipc_server.container"
 ASIL_CLIENT="/etc/qm/containers/systemd/ipc_client.container"
 
 # Define file content based on mode
 if [[ "$MODE" == "qm-to-qm" ]]; then
   LISTEN_PATH="%t/ipc.socket"
   VOLUME_PATH="/run/:/run/"
-  
+
+  SOCKET=$QMQM_SOCKET  
+  SERVER=$QMQM_SERVER
+  CLIENT=$QMQM_CLIENT
+
   # Remove asil-to-qm versions
   echo "Cleaning up asil-to-qm files..."
   rm -f "$ASIL_SOCKET" "$ASIL_SERVER" "$ASIL_CLIENT"
 else
+  SOCKET=$ASIL_SOCKET
+  SERVER=$ASIL_SERVER
+  CLIENT=$ASIL_CLIENT
+
   LISTEN_PATH="%t/ipc/ipc_server.socket"
   VOLUME_PATH="/run/ipc:/run/ipc"
 
   # Remove qm-to-qm versions
   echo "Cleaning up qm-to-qm files..."
-  rm -f "$QMQM_SOCKET" "$QMQM_SERVER" "$QMQM_CLIENT"
+  rm -f $QMQM_SOCKET $QMQM_SERVER $QMQM_CLIENT
 fi
 
 # Create ipc_server.socket
-cat <<EOF > "$ASIL_SOCKET"
+cat <<EOF > "$SOCKET"
 [Unit]
 Description=IPC Server Socket for $MODE
 [Socket]
@@ -48,7 +56,7 @@ WantedBy=sockets.target
 EOF
 
 # Create ipc_server.container
-cat <<EOF > "$ASIL_SERVER"
+cat <<EOF > "$SERVER"
 [Unit]
 Description=Demo server service container ($MODE)
 Requires=ipc_server.socket
@@ -67,7 +75,7 @@ WantedBy=multi-user.target
 EOF
 
 # Create ipc_client.container
-cat <<EOF > "$ASIL_CLIENT"
+cat <<EOF > "$CLIENT"
 [Unit]
 Description=Demo client service container ($MODE)
 Requires=ipc_server.socket
