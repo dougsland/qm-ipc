@@ -44,6 +44,7 @@ else
 fi
 
 # Create ipc_server.socket
+echo "Creating $SOCKET"
 cat <<EOF > "$SOCKET"
 [Unit]
 Description=IPC Server Socket for $MODE
@@ -55,6 +56,7 @@ SELinuxContextFromNet=yes
 WantedBy=sockets.target
 EOF
 
+echo "Creating $SERVER"
 # Create ipc_server.container
 cat <<EOF > "$SERVER"
 [Unit]
@@ -74,6 +76,7 @@ Type=notify
 WantedBy=multi-user.target
 EOF
 
+echo "Creating $CLIENT"
 # Create ipc_client.container
 cat <<EOF > "$CLIENT"
 [Unit]
@@ -103,12 +106,24 @@ if [[ "$MODE" == "qm-to-qm" ]]; then
   podman exec -it qm bash -c "podman restart systemd-ipc_client"
   podman exec -it qm bash -c "podman ps"
 else
+  echo "systemctl daemon reload..."
   systemctl daemon-reload
+  echo "restart ipc_server.socket"
   systemctl restart ipc_server.socket
-  systemctl restart systemd-ipc_server
+  echo "restart ipc_server"
+  systemctl restart ipc_server
+
+  echo "restarting qm..."
   podman restart qm
+  sleep 5
+
+  echo "systemctl daemon-reload inside qm..."
   podman exec -it qm bash -c "systemctl daemon-reload"
-  podman exec -it qm bash -c "podman restart systemd-ipc_client"
+
+  echo "restart systemd-ipc_client inside qm..."
+  podman exec -it qm bash -c "podman start systemd-ipc_client"
+
+  echo "podman ps inside qm..."
   podman exec -it qm bash -c "podman ps"
 fi
 
