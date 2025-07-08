@@ -22,6 +22,9 @@ ASIL_EXTRA_VOLUME="/etc/containers/systemd/qm.container.d/10-extra-volume.conf"
 
 # Define file content based on mode
 if [[ "$MODE" == "qm-to-qm" ]]; then
+  echo "Cleaning up asil-to-qm files..."
+  rm -f "$ASIL_SOCKET" "$ASIL_SERVER" "$ASIL_CLIENT" "$ASIL_EXTRA_VOLUME"
+
   LISTEN_PATH="%t/ipc.socket"
   VOLUME_PATH="/run/:/run/"
 
@@ -31,20 +34,20 @@ if [[ "$MODE" == "qm-to-qm" ]]; then
   EXTRA_VOLUME=""
 
   # Remove asil-to-qm versions
-  echo "Cleaning up asil-to-qm files..."
-  rm -f "$ASIL_SOCKET" "$ASIL_SERVER" "$ASIL_CLIENT"
 else
+  echo "Cleaning up qm-to-qm files..."
+  rm -f $QMQM_SOCKET $QMQM_SERVER $QMQM_CLIENT $QMQM_EXTRA_VOLUME
+
   SOCKET=$ASIL_SOCKET
   SERVER=$ASIL_SERVER
   CLIENT=$ASIL_CLIENT
   EXTRA_VOLUME="$ASIL_EXTRA_VOLUME"
 
-  LISTEN_PATH="%t/ipc/ipc_server.socket"
-  VOLUME_PATH="/run/ipc:/run/ipc"
+  #LISTEN_PATH="%t/ipc/ipc_server.socket"
+  #VOLUME_PATH="/run/ipc:/run/ipc"
+  LISTEN_PATH="%t/ipc.socket"
+  VOLUME_PATH="/run/:/run/"
 
-  # Remove qm-to-qm versions
-  echo "Cleaning up qm-to-qm files..."
-  rm -f $QMQM_SOCKET $QMQM_SERVER $QMQM_CLIENT
 fi
 
 # Create ipc_server.socket
@@ -96,8 +99,8 @@ echo "Creating $CLIENT"
 cat <<EOF > "$CLIENT"
 [Unit]
 Description=Demo client service container ($MODE)
-Requires=ipc_server.socket
-After=ipc_server.socket
+#Requires=ipc_server.socket
+#After=ipc_server.socket
 [Container]
 Image=quay.io/yarboa/ipc-demo/ipc_client:latest
 Network=none
@@ -114,12 +117,31 @@ EOF
 if [[ "$MODE" == "qm-to-qm" ]]; then
   echo "Reloading systemd and restarting containers (qm-to-qm)..."
   systemctl daemon-reload
-  podman restart qm
+  systemctl restart qm
+  sleep 15
+
+  # make sure asil-to-qm env do not exist
+  podman stop systemd-ipc_server &> /dev/null
+
+  echo "qm: systemctl daemon-reload"
   podman exec -it qm bash -c "systemctl daemon-reload"
-  podman exec -it qm bash -c "podman restart ipc_server.socket"
-  podman exec -it qm bash -c "podman restart systemd-ipc_server"
+
+  echo "qm: systemctl restart ipc_server.socket"
+  podman exec -it qm bash -c "systemctl restart ipc_server.socket"
+
+  echo "qm: systemct status ipc_server.socket"
+  podman exec -it qm bash -c "systemctl status ipc_server.socket"
+
+  echo "qm: podman restart systemd-ipc_client"
   podman exec -it qm bash -c "podman restart systemd-ipc_client"
+  sleep 15
+
+  echo "qm: podman ps"
   podman exec -it qm bash -c "podman ps"
+
+  echo "qm: podman logs systemd-ipc_client"
+  podman exec -it qm bash -c "podman logs systemd-ipc_client"
+
 else
   echo "systemctl daemon reload..."
   systemctl daemon-reload
@@ -129,17 +151,19 @@ else
   systemctl restart ipc_server
 
   echo "restarting qm..."
-  podman restart qm
+  systemctl restart qm
   sleep 5
 
   echo "systemctl daemon-reload inside qm..."
   podman exec -it qm bash -c "systemctl daemon-reload"
 
-  echo "restart systemd-ipc_client inside qm..."
-  podman exec -it qm bash -c "podman start systemd-ipc_client"
+  echo "systemctl status ipc_client"
+  podman exec -it qm bash -c "systemctl status ipc_client"
+
+  #echo "start ipc_client inside qm..."
+  #podman exec -it qm bash -c "podman restart systemd-ipc_client"
+  #sleep 15
 
   echo "podman ps inside qm..."
   podman exec -it qm bash -c "podman ps"
 fi
-
-echo "IPC configuration applied for mode: $MODE"
