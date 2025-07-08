@@ -32,6 +32,7 @@ if [[ "$MODE" == "qm-to-qm" ]]; then
   SERVER=$QMQM_SERVER
   CLIENT=$QMQM_CLIENT
   EXTRA_VOLUME=""
+  ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc.socket"
 
   # Remove asil-to-qm versions
 else
@@ -42,6 +43,7 @@ else
   SERVER=$ASIL_SERVER
   CLIENT=$ASIL_CLIENT
   EXTRA_VOLUME="$ASIL_EXTRA_VOLUME"
+  ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc/ipc_server.socket"
 
   #LISTEN_PATH="%t/ipc/ipc_server.socket"
   #VOLUME_PATH="/run/ipc:/run/ipc"
@@ -84,7 +86,7 @@ After=ipc_server.socket
 [Container]
 Image=quay.io/yarboa/ipc-demo/ipc_server
 Network=none
-Environment=SOCKET_PATH=/run/ipc.socket
+$ENVIRONMENT
 Volume=$VOLUME_PATH
 SecurityLabelLevel=s0:c1,c2
 [Service]
@@ -104,7 +106,7 @@ Description=Demo client service container ($MODE)
 [Container]
 Image=quay.io/yarboa/ipc-demo/ipc_client:latest
 Network=none
-Environment=SOCKET_PATH=/run/ipc.socket
+$ENVIRONMENT
 Volume=$VOLUME_PATH
 SecurityLabelLevel=s0:c1,c2
 [Service]
@@ -163,6 +165,9 @@ else
   echo "qm: restart ipc_client inside qm..."
   podman exec -it qm bash -c "podman restart systemd-ipc_client"
   sleep 15
+
+  echo "qm: systemctl status ipc_client"
+  podman exec -it qm bash -c "systemctl status ipc_client"
 
   echo "qm: podman ps inside qm..."
   podman exec -it qm bash -c "podman ps"
