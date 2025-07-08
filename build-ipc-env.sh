@@ -96,13 +96,20 @@ EOF
 if [[ "$MODE" == "qm-to-qm" ]]; then
   echo "Reloading systemd and restarting containers (qm-to-qm)..."
   systemctl daemon-reload
+  podman restart qm
   podman exec -it qm bash -c "systemctl daemon-reload"
   podman exec -it qm bash -c "podman restart ipc_server.socket"
   podman exec -it qm bash -c "podman restart systemd-ipc_server"
   podman exec -it qm bash -c "podman restart systemd-ipc_client"
   podman exec -it qm bash -c "podman ps"
 else
-  echo "Skipping systemd and container restarts for asil-to-qm."
+  systemctl daemon-reload
+  systemctl restart ipc_server.socket
+  systemctl restart systemd-ipc_server
+  podman restart qm
+  podman exec -it qm bash -c "systemctl daemon-reload"
+  podman exec -it qm bash -c "podman restart systemd-ipc_client"
+  podman exec -it qm bash -c "podman ps"
 fi
 
 echo "IPC configuration applied for mode: $MODE"
