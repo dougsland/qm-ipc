@@ -13,10 +13,12 @@ echo "Creating IPC files for mode: $MODE"
 QMQM_SOCKET="/etc/qm/systemd/system/ipc_server.socket"
 QMQM_SERVER="/etc/qm/containers/systemd/ipc_server.container"
 QMQM_CLIENT="/etc/qm/containers/systemd/ipc_client.container"
+QMQM_EXTRA_VOLUME=""
 
 ASIL_SOCKET="/etc/systemd/system/ipc_server.socket"
 ASIL_SERVER="/etc/containers/systemd/ipc_server.container"
 ASIL_CLIENT="/etc/qm/containers/systemd/ipc_client.container"
+ASIL_EXTRA_VOLUME="/etc/containers/systemd/qm.container.d/10-extra-volume.conf"
 
 # Define file content based on mode
 if [[ "$MODE" == "qm-to-qm" ]]; then
@@ -26,6 +28,7 @@ if [[ "$MODE" == "qm-to-qm" ]]; then
   SOCKET=$QMQM_SOCKET  
   SERVER=$QMQM_SERVER
   CLIENT=$QMQM_CLIENT
+  EXTRA_VOLUME=""
 
   # Remove asil-to-qm versions
   echo "Cleaning up asil-to-qm files..."
@@ -34,6 +37,7 @@ else
   SOCKET=$ASIL_SOCKET
   SERVER=$ASIL_SERVER
   CLIENT=$ASIL_CLIENT
+  EXTRA_VOLUME="$ASIL_EXTRA_VOLUME"
 
   LISTEN_PATH="%t/ipc/ipc_server.socket"
   VOLUME_PATH="/run/ipc:/run/ipc"
@@ -55,6 +59,17 @@ SELinuxContextFromNet=yes
 [Install]
 WantedBy=sockets.target
 EOF
+
+if [[ -n "$EXTRA_VOLUME" ]]; then
+echo "Creating $EXTRA_VOLUME..."
+cat <<EOF > "$EXTRA_VOLUME"
+[Unit]
+Requires=ipc_server
+
+[Container]
+Volume=/run/ipc:/run/ipc
+EOF
+fi
 
 echo "Creating $SERVER"
 # Create ipc_server.container
