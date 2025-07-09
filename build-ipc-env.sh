@@ -44,13 +44,10 @@ else
   SERVER=$ASIL_SERVER
   CLIENT=$ASIL_CLIENT
   EXTRA_VOLUME="$ASIL_EXTRA_VOLUME"
-  #ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc.socket"
-  ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc/ipc_server.socket"
 
-  LISTEN_PATH="%t/ipc.socket"
-  VOLUME_PATH="/run/ipc.socket:/run/ipc.socket"
-  #LISTEN_PATH="%t/ipc.socket"
-  #VOLUME_PATH="/run/:/run/"
+  ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc/ipc.socket"
+  LISTEN_PATH="%t/ipc/ipc.socket"
+  VOLUME_PATH="/run/ipc/ipc.socket:/run/ipc/ipc.socket"
 
 fi
 
@@ -62,6 +59,7 @@ Description=IPC Server Socket for $MODE
 [Socket]
 ListenStream=$LISTEN_PATH
 SELinuxContextFromNet=yes
+SecurityLabelFileType=qm_container_file_t
 
 [Install]
 WantedBy=sockets.target
@@ -93,7 +91,7 @@ Network=none
 $ENVIRONMENT
 Volume=$VOLUME_PATH
 SecurityLabelLevel=s0:c1,c2
-SecurityLabelFileType=qm_container_file_t
+#SecurityLabelFileType=qm_container_file_t
 [Service]
 Restart=always
 Type=notify
@@ -114,7 +112,7 @@ Network=none
 $ENVIRONMENT
 Volume=$VOLUME_PATH
 SecurityLabelLevel=s0:c1,c2
-SecurityLabelFileType=qm_container_file_t
+#SecurityLabelFileType=qm_container_file_t
 [Service]
 Restart=always
 [Install]
