@@ -26,13 +26,13 @@ if [[ "$MODE" == "qm-to-qm" ]]; then
   rm -f "$ASIL_SOCKET" "$ASIL_SERVER" "$ASIL_CLIENT" "$ASIL_EXTRA_VOLUME"
 
   LISTEN_PATH="%t/ipc.socket"
-  VOLUME_PATH="/run/:/run/"
+  VOLUME_PATH=/run/:/run/
+  ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc.socket"
 
   SOCKET=$QMQM_SOCKET  
   SERVER=$QMQM_SERVER
   CLIENT=$QMQM_CLIENT
   EXTRA_VOLUME=""
-  ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc.socket"
 
   # Remove asil-to-qm versions
 else
@@ -44,13 +44,13 @@ else
   SERVER=$ASIL_SERVER
   CLIENT=$ASIL_CLIENT
   EXTRA_VOLUME="$ASIL_EXTRA_VOLUME"
-  ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc.socket"
-  #ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc/ipc_server.socket"
+  #ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc.socket"
+  ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc/ipc_server.socket"
 
-  #LISTEN_PATH="%t/ipc/ipc_server.socket"
-  #VOLUME_PATH="/run/ipc:/run/ipc"
   LISTEN_PATH="%t/ipc.socket"
-  VOLUME_PATH="/run/:/run/"
+  VOLUME_PATH="/run/ipc.socket:/run/ipc.socket"
+  #LISTEN_PATH="%t/ipc.socket"
+  #VOLUME_PATH="/run/:/run/"
 
 fi
 
@@ -76,7 +76,7 @@ cat <<EOF > "$EXTRA_VOLUME"
 Requires=ipc_server
 
 [Container]
-Volume=/run/ipc:/run/ipc
+Volume=$VOLUME_PATH
 EOF
 fi
 
@@ -93,6 +93,7 @@ Network=none
 $ENVIRONMENT
 Volume=$VOLUME_PATH
 SecurityLabelLevel=s0:c1,c2
+SecurityLabelFileType=qm_container_file_t
 [Service]
 Restart=always
 Type=notify
@@ -113,6 +114,7 @@ Network=none
 $ENVIRONMENT
 Volume=$VOLUME_PATH
 SecurityLabelLevel=s0:c1,c2
+SecurityLabelFileType=qm_container_file_t
 [Service]
 Restart=always
 [Install]
@@ -133,13 +135,13 @@ if [[ "$MODE" == "qm-to-qm" ]]; then
   podman exec -it qm bash -c "systemctl daemon-reload"
 
   echo "qm: systemctl restart ipc_server.socket"
-  podman exec -it qm bash -c "systemctl restart ipc_server.socket"
+  podman exec -it qm bash -c "systemctl restart ipc_server.socket" &> /dev/null
 
   echo "qm: systemct status ipc_server.socket"
-  podman exec -it qm bash -c "systemctl status ipc_server.socket"
+  podman exec -it qm bash -c "systemctl status ipc_server.socket" &> /dev/null
 
   echo "qm: podman restart systemd-ipc_client"
-  podman exec -it qm bash -c "podman restart systemd-ipc_client"
+  podman exec -it qm bash -c "podman restart systemd-ipc_client" &> /dev/null
   sleep 15
 
   echo "qm: podman ps"
@@ -147,6 +149,47 @@ if [[ "$MODE" == "qm-to-qm" ]]; then
 
   echo "qm: podman logs systemd-ipc_client"
   podman exec -it qm bash -c "podman logs systemd-ipc_client"
+
+  echo
+  echo "===================================="
+  echo "Printing $SOCKET"
+  echo "===================================="
+  cat $SOCKET
+
+  echo
+  echo "===================================="
+  echo "Printing $CLIENT"
+  echo "===================================="
+  cat $CLIENT
+
+  echo
+  echo "===================================="
+  echo "Printing $SERVER"
+  echo "===================================="
+  cat $SERVER
+
+  if [[ -n $EXTRA_VOLUME ]]; then
+      echo "===================================="
+      echo "Printing $EXTRA_VOLUME"
+      echo "===================================="
+      cat $EXTRA_VOLUME
+
+      echo "ls -laZ ${VOLUME_PATH%%:*} in the HOST"
+      ls -laZ "${VOLUME_PATH%%:*}"
+  fi
+
+  echo
+  echo "===================================="
+  echo "ls -laZ "${VOLUME_PATH%%:*}" in the HOST"
+  echo "===================================="
+  ls -laZ ${VOLUME_PATH%%:*} | grep ipc
+
+  echo
+  echo "===================================="
+  echo "ls -laZ "${VOLUME_PATH%%:*}" in the QM"
+  echo "===================================="
+  podman exec -it qm bash -c "ls -laZ ${VOLUME_PATH%%:*} | grep ipc"
+
 
 else
   echo "systemctl daemon reload..."
