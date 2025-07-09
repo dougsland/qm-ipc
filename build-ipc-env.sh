@@ -36,6 +36,7 @@ if [[ "$MODE" == "qm-to-qm" ]]; then
 
   # Remove asil-to-qm versions
 else
+  # asil to qm
   echo "Cleaning up qm-to-qm files..."
   rm -f $QMQM_SOCKET $QMQM_SERVER $QMQM_CLIENT $QMQM_EXTRA_VOLUME
 
@@ -43,7 +44,8 @@ else
   SERVER=$ASIL_SERVER
   CLIENT=$ASIL_CLIENT
   EXTRA_VOLUME="$ASIL_EXTRA_VOLUME"
-  ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc/ipc_server.socket"
+  ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc.socket"
+  #ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc/ipc_server.socket"
 
   #LISTEN_PATH="%t/ipc/ipc_server.socket"
   #VOLUME_PATH="/run/ipc:/run/ipc"
@@ -66,6 +68,8 @@ WantedBy=sockets.target
 EOF
 
 if [[ -n "$EXTRA_VOLUME" ]]; then
+ASIL_VOLUME_DIR="${ASIL_EXTRA_VOLUME%/*}"
+mkdir -p "$ASIL_VOLUME_DIR"
 echo "Creating $EXTRA_VOLUME"
 cat <<EOF > "$EXTRA_VOLUME"
 [Unit]
