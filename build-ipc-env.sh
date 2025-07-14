@@ -47,7 +47,8 @@ else
 
   ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc/ipc.socket"
   LISTEN_PATH="%t/ipc/ipc.socket"
-  VOLUME_PATH="/run/ipc/ipc.socket:/run/ipc/ipc.socket"
+  #VOLUME_PATH="/run/ipc/ipc.socket:/run/ipc/ipc.socket"
+  VOLUME_PATH="/run/ipc/:/run/ipc/"
 
 fi
 
