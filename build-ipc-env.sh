@@ -60,7 +60,6 @@ Description=IPC Server Socket for $MODE
 [Socket]
 ListenStream=$LISTEN_PATH
 SELinuxContextFromNet=yes
-SecurityLabelFileType=qm_container_file_t
 
 [Install]
 WantedBy=sockets.target
@@ -91,8 +90,7 @@ Image=quay.io/yarboa/ipc-demo/ipc_server
 Network=none
 $ENVIRONMENT
 Volume=$VOLUME_PATH
-SecurityLabelLevel=s0:c1,c2
-#SecurityLabelFileType=qm_container_file_t
+SecurityLabelType=ipc_t
 [Service]
 Restart=always
 Type=notify
@@ -112,8 +110,7 @@ Image=quay.io/yarboa/ipc-demo/ipc_client:latest
 Network=none
 $ENVIRONMENT
 Volume=$VOLUME_PATH
-SecurityLabelLevel=s0:c1,c2
-#SecurityLabelFileType=qm_container_file_t
+SecurityLabelType=qm_container_ipc_t
 [Service]
 Restart=always
 [Install]
