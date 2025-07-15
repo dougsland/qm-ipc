@@ -146,47 +146,6 @@ if [[ "$MODE" == "qm-to-qm" ]]; then
   echo "qm: podman logs systemd-ipc_client"
   podman exec -it qm bash -c "podman logs systemd-ipc_client"
 
-  echo
-  echo "===================================="
-  echo "Printing $SOCKET"
-  echo "===================================="
-  cat $SOCKET
-
-  echo
-  echo "===================================="
-  echo "Printing $CLIENT"
-  echo "===================================="
-  cat $CLIENT
-
-  echo
-  echo "===================================="
-  echo "Printing $SERVER"
-  echo "===================================="
-  cat $SERVER
-
-  if [[ -n $EXTRA_VOLUME ]]; then
-      echo "===================================="
-      echo "Printing $EXTRA_VOLUME"
-      echo "===================================="
-      cat $EXTRA_VOLUME
-
-      echo "ls -laZ ${VOLUME_PATH%%:*} in the HOST"
-      ls -laZ "${VOLUME_PATH%%:*}"
-  fi
-
-  echo
-  echo "===================================="
-  echo "ls -laZ "${VOLUME_PATH%%:*}" in the HOST"
-  echo "===================================="
-  ls -laZ ${VOLUME_PATH%%:*} | grep ipc
-
-  echo
-  echo "===================================="
-  echo "ls -laZ "${VOLUME_PATH%%:*}" in the QM"
-  echo "===================================="
-  podman exec -it qm bash -c "ls -laZ ${VOLUME_PATH%%:*} | grep ipc"
-
-
 else
   echo "systemctl daemon reload..."
   systemctl daemon-reload
@@ -215,3 +174,43 @@ else
   echo "qm: podman ps inside qm..."
   podman exec -it qm bash -c "podman ps"
 fi
+
+echo
+echo "===================================="
+echo "Printing $SOCKET"
+echo "===================================="
+cat $SOCKET
+
+echo
+echo "===================================="
+echo "Printing $CLIENT"
+echo "===================================="
+cat $CLIENT
+
+echo
+echo "===================================="
+echo "Printing $SERVER"
+echo "===================================="
+cat $SERVER
+
+if [[ -n $EXTRA_VOLUME ]]; then
+    echo "===================================="
+    echo "Printing $EXTRA_VOLUME"
+    echo "===================================="
+    cat $EXTRA_VOLUME
+
+    echo "ls -laZ ${VOLUME_PATH%%:*} in the HOST"
+    ls -laZ "${VOLUME_PATH%%:*}"
+fi
+
+echo
+echo "===================================="
+echo "ls -laZ "${VOLUME_PATH%%:*}" in the HOST"
+echo "===================================="
+ls -laZ ${VOLUME_PATH%%:*} | grep ipc
+
+echo
+echo "===================================="
+echo "ls -laZ "${VOLUME_PATH%%:*}" in the QM"
+echo "===================================="
+podman exec -it qm bash -c "ls -laZ ${VOLUME_PATH%%:*} | grep ipc"
