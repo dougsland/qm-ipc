@@ -53,8 +53,9 @@ else
 fi
 
 # Create ipc_server.socket
-echo "Creating $SOCKET"
-cat <<EOF > "$SOCKET"
+if [[ "$MODE" == "asil-to-qm" ]]; then
+    echo "Creating $SOCKET"
+    cat <<EOF > "$SOCKET"
 [Unit]
 Description=IPC Server Socket for $MODE
 [Socket]
@@ -64,6 +65,7 @@ SELinuxContextFromNet=yes
 [Install]
 WantedBy=sockets.target
 EOF
+fi
 
 if [[ -n "$EXTRA_VOLUME" ]]; then
 ASIL_VOLUME_DIR="${ASIL_EXTRA_VOLUME%/*}"
