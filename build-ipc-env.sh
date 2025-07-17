@@ -1,5 +1,71 @@
 #!/bin/bash
 
+daemon_reload_in_qm() {
+    echo "qm: systemctl daemon-reload inside qm..."
+    podman exec -it qm bash -c "systemctl daemon-reload"
+}
+
+restart_ipc_client_in_qm() {
+    echo "qm: restart ipc_client inside qm..."
+    podman exec -it qm bash -c "podman restart systemd-ipc_client"
+    sleep 15
+}
+
+show_qm_podman_ps() {
+    echo "qm: podman ps inside qm..."
+    podman exec -it qm bash -c "podman ps"
+}
+
+check_ipc_client_logs() {
+    echo "qm: podman logs systemd-ipc_client"
+    if podman exec -it qm bash -c "podman logs systemd-ipc_client" | grep -qi "permission denied"; then
+        echo "systemd-ipc_client has failed"
+        exit 1
+    fi
+}
+
+print_debug_info() {
+    echo
+    echo "===================================="
+    echo "Printing $SOCKET"
+    echo "===================================="
+    cat $SOCKET
+
+    echo
+    echo "===================================="
+    echo "Printing $CLIENT"
+    echo "===================================="
+    cat $CLIENT
+
+    echo
+    echo "===================================="
+    echo "Printing $SERVER"
+    echo "===================================="
+    cat $SERVER
+
+    if [[ -n $EXTRA_VOLUME ]]; then
+        echo "===================================="
+        echo "Printing $EXTRA_VOLUME"
+        echo "===================================="
+        cat $EXTRA_VOLUME
+
+        echo "ls -laZ ${VOLUME_PATH%%:*} in the HOST"
+        ls -laZ "${VOLUME_PATH%%:*}"
+    fi
+
+    echo
+    echo "===================================="
+    echo "ls -laZ "${VOLUME_PATH%%:*}" in the HOST"
+    echo "===================================="
+    ls -laZ ${VOLUME_PATH%%:*} | grep ipc
+
+    echo
+    echo "===================================="
+    echo "ls -laZ "${VOLUME_PATH%%:*}" in the QM"
+    echo "===================================="
+    podman exec -it qm bash -c "ls -laZ ${VOLUME_PATH%%:*} | grep ipc"
+}
+
 MODE="$1"
 
 if [[ "$MODE" != "qm-to-qm" && "$MODE" != "asil-to-qm" ]]; then
@@ -129,8 +195,7 @@ if [[ "$MODE" == "qm-to-qm" ]]; then
   # make sure asil-to-qm env do not exist
   podman stop systemd-ipc_server &> /dev/null
 
-  echo "qm: systemctl daemon-reload"
-  podman exec -it qm bash -c "systemctl daemon-reload"
+  daemon_reload_in_qm
 
   echo "qm: systemctl restart ipc_server.socket"
   podman exec -it qm bash -c "systemctl restart ipc_server.socket" &> /dev/null
@@ -138,21 +203,15 @@ if [[ "$MODE" == "qm-to-qm" ]]; then
   echo "qm: systemct status ipc_server.socket"
   podman exec -it qm bash -c "systemctl status ipc_server.socket" &> /dev/null
 
-  echo "qm: podman restart systemd-ipc_client"
-  podman exec -it qm bash -c "podman restart systemd-ipc_client" &> /dev/null
-  sleep 15
-
-  echo "qm: podman ps"
-  podman exec -it qm bash -c "podman ps"
-
-  echo "qm: podman logs systemd-ipc_client"
-  podman exec -it qm bash -c "podman logs systemd-ipc_client"
+  restart_ipc_client_in_qm
 
 else
   echo "systemctl daemon reload..."
   systemctl daemon-reload
+
   echo "restart ipc_server.socket"
   systemctl restart ipc_server.socket
+
   echo "restart ipc_server"
   systemctl restart ipc_server
 
@@ -160,59 +219,18 @@ else
   systemctl restart qm
   sleep 5
 
-  echo "qm: systemctl daemon-reload inside qm..."
-  podman exec -it qm bash -c "systemctl daemon-reload"
+  daemon_reload_in_qm
 
   echo "qm: systemctl status ipc_client"
   podman exec -it qm bash -c "systemctl status ipc_client"
 
-  echo "qm: restart ipc_client inside qm..."
-  podman exec -it qm bash -c "podman restart systemd-ipc_client"
-  sleep 15
+  restart_ipc_client_in_qm
 
   echo "qm: systemctl status ipc_client"
   podman exec -it qm bash -c "systemctl status ipc_client"
 
-  echo "qm: podman ps inside qm..."
-  podman exec -it qm bash -c "podman ps"
 fi
 
-echo
-echo "===================================="
-echo "Printing $SOCKET"
-echo "===================================="
-cat $SOCKET
-
-echo
-echo "===================================="
-echo "Printing $CLIENT"
-echo "===================================="
-cat $CLIENT
-
-echo
-echo "===================================="
-echo "Printing $SERVER"
-echo "===================================="
-cat $SERVER
-
-if [[ -n $EXTRA_VOLUME ]]; then
-    echo "===================================="
-    echo "Printing $EXTRA_VOLUME"
-    echo "===================================="
-    cat $EXTRA_VOLUME
-
-    echo "ls -laZ ${VOLUME_PATH%%:*} in the HOST"
-    ls -laZ "${VOLUME_PATH%%:*}"
-fi
-
-echo
-echo "===================================="
-echo "ls -laZ "${VOLUME_PATH%%:*}" in the HOST"
-echo "===================================="
-ls -laZ ${VOLUME_PATH%%:*} | grep ipc
-
-echo
-echo "===================================="
-echo "ls -laZ "${VOLUME_PATH%%:*}" in the QM"
-echo "===================================="
-podman exec -it qm bash -c "ls -laZ ${VOLUME_PATH%%:*} | grep ipc"
+show_qm_podman_ps
+check_ipc_client_logs
+print_debug_info
