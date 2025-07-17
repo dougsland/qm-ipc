@@ -76,10 +76,10 @@ fi
 echo "Creating IPC files for mode: $MODE"
 
 # Define file paths for both modes
-QMQM_SOCKET="/etc/qm/systemd/system/ipc_server.socket"
+QMQM_SOCKET=""
+QMQM_EXTRA_VOLUME=""
 QMQM_SERVER="/etc/qm/containers/systemd/ipc_server.container"
 QMQM_CLIENT="/etc/qm/containers/systemd/ipc_client.container"
-QMQM_EXTRA_VOLUME=""
 
 ASIL_SOCKET="/etc/systemd/system/ipc_server.socket"
 ASIL_SERVER="/etc/containers/systemd/ipc_server.container"
@@ -171,8 +171,6 @@ echo "Creating $CLIENT"
 cat <<EOF > "$CLIENT"
 [Unit]
 Description=Demo client service container ($MODE)
-#Requires=ipc_server.socket
-#After=ipc_server.socket
 [Container]
 Image=quay.io/yarboa/ipc-demo/ipc_client:latest
 Network=none
