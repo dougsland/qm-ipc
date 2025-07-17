@@ -25,11 +25,13 @@ check_ipc_client_logs() {
 }
 
 print_debug_info() {
-    echo
-    echo "===================================="
-    echo "Printing $SOCKET"
-    echo "===================================="
-    cat $SOCKET
+    if [[ "$MODE" == "asil-to-qm" ]]; then
+        echo
+        echo "===================================="
+        echo "Printing $SOCKET"
+        echo "===================================="
+        cat $SOCKET
+    fi
 
     echo
     echo "===================================="
