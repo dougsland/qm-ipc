@@ -18,20 +18,37 @@ show_qm_podman_ps() {
 
 check_ipc_client_logs() {
     echo "qm: podman logs systemd-ipc_client"
-    if podman exec -it qm bash -c "podman logs systemd-ipc_client" | grep -qi "permission denied"; then
+    if podman exec -it qm bash -c "podman logs systemd-ipc_client" | grep -Eiq "permission denied|no such file or directory"; then
         echo "systemd-ipc_client has failed"
         exit 1
     fi
 }
 
+check_nested_container_exists() {
+  local container_name="$1"
+
+  echo "Checking for '$container_name' inside 'qm'..."
+
+  # Capture output of nested podman ps inside qm
+  local output
+  output=$(podman exec qm podman ps --format "{{.Names}}" 2>/dev/null)
+
+  if echo "$output" | grep -wq "$container_name"; then
+    echo "Container '$container_name' exists inside 'qm'."
+  else
+    echo "Container '$container_name' does NOT exist inside 'qm'."
+    echo "Output from qm's podman:"
+    echo "$output"
+    exit 1
+  fi
+}
+
 print_debug_info() {
-    if [[ "$MODE" == "asil-to-qm" ]]; then
-        echo
-        echo "===================================="
-        echo "Printing $SOCKET"
-        echo "===================================="
-        cat $SOCKET
-    fi
+    echo
+    echo "===================================="
+    echo "Printing $SOCKET"
+    echo "===================================="
+    cat $SOCKET
 
     echo
     echo "===================================="
@@ -68,14 +85,19 @@ print_debug_info() {
     podman exec -it qm bash -c "ls -laZ ${VOLUME_PATH%%:*} | grep ipc"
 }
 
-MODE="$1"
+check_container_exists() {
+    local container_name="systemd-ipc_server"
+    echo "Checking if container '$container_name' exists and is running..."
 
-if [[ "$MODE" != "qm-to-qm" && "$MODE" != "asil-to-qm" ]]; then
-  echo "Usage: $0 [qm-to-qm|asil-to-qm]"
-  exit 1
-fi
+    if podman ps --format "{{.Names}}" | grep -q "^${container_name}$"; then
+        echo "Container '$container_name' is running."
+    else
+        echo "Container '$container_name' is NOT running."
+        exit 1
+    fi
+}
 
-echo "Creating IPC files for mode: $MODE"
+echo "Creating IPC files for mode: ASIL to QM"
 
 # Define file paths for both modes
 QMQM_SOCKET=""
@@ -88,42 +110,22 @@ ASIL_SERVER="/etc/containers/systemd/ipc_server.container"
 ASIL_CLIENT="/etc/qm/containers/systemd/ipc_client.container"
 ASIL_EXTRA_VOLUME="/etc/containers/systemd/qm.container.d/10-extra-volume.conf"
 
-# Define file content based on mode
-if [[ "$MODE" == "qm-to-qm" ]]; then
-  echo "Cleaning up asil-to-qm files..."
-  rm -f "$ASIL_SOCKET" "$ASIL_SERVER" "$ASIL_CLIENT" "$ASIL_EXTRA_VOLUME"
+# asil to qm
+echo "Cleaning up qm-to-qm files..."
+rm -f $QMQM_SOCKET $QMQM_SERVER $QMQM_CLIENT $QMQM_EXTRA_VOLUME
 
-  LISTEN_PATH="%t/ipc.socket"
-  VOLUME_PATH=/run/:/run/
-  ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc.socket"
+SOCKET=$ASIL_SOCKET
+SERVER=$ASIL_SERVER
+CLIENT=$ASIL_CLIENT
+EXTRA_VOLUME="$ASIL_EXTRA_VOLUME"
 
-  SOCKET=$QMQM_SOCKET  
-  SERVER=$QMQM_SERVER
-  CLIENT=$QMQM_CLIENT
-  EXTRA_VOLUME=""
-
-  # Remove asil-to-qm versions
-else
-  # asil to qm
-  echo "Cleaning up qm-to-qm files..."
-  rm -f $QMQM_SOCKET $QMQM_SERVER $QMQM_CLIENT $QMQM_EXTRA_VOLUME
-
-  SOCKET=$ASIL_SOCKET
-  SERVER=$ASIL_SERVER
-  CLIENT=$ASIL_CLIENT
-  EXTRA_VOLUME="$ASIL_EXTRA_VOLUME"
-
-  ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc/ipc.socket"
-  LISTEN_PATH="%t/ipc/ipc.socket"
-  #VOLUME_PATH="/run/ipc/ipc.socket:/run/ipc/ipc.socket"
-  VOLUME_PATH="/run/ipc/:/run/ipc/"
-
-fi
+ENVIRONMENT="Environment=SOCKET_PATH=/run/ipc/ipc.socket"
+LISTEN_PATH="%t/ipc/ipc.socket"
+VOLUME_PATH="/run/ipc/:/run/ipc/"
 
 # Create ipc_server.socket
-if [[ "$MODE" == "asil-to-qm" ]]; then
-    echo "Creating $SOCKET"
-    cat <<EOF > "$SOCKET"
+echo "Creating $SOCKET"
+cat <<EOF > "$SOCKET"
 [Unit]
 Description=IPC Server Socket for $MODE
 [Socket]
@@ -133,9 +135,7 @@ SELinuxContextFromNet=yes
 [Install]
 WantedBy=sockets.target
 EOF
-fi
 
-if [[ -n "$EXTRA_VOLUME" ]]; then
 ASIL_VOLUME_DIR="${ASIL_EXTRA_VOLUME%/*}"
 mkdir -p "$ASIL_VOLUME_DIR"
 echo "Creating $EXTRA_VOLUME"
@@ -146,7 +146,6 @@ Requires=ipc_server
 [Container]
 Volume=$VOLUME_PATH
 EOF
-fi
 
 echo "Creating $SERVER"
 # Create ipc_server.container
@@ -185,51 +184,30 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
-# Only restart services for qm-to-qm
-if [[ "$MODE" == "qm-to-qm" ]]; then
-  echo "Reloading systemd and restarting containers (qm-to-qm)..."
-  systemctl daemon-reload
-  systemctl restart qm
-  sleep 15
+echo "systemctl daemon reload..."
+systemctl daemon-reload
 
-  # make sure asil-to-qm env do not exist
-  podman stop systemd-ipc_server &> /dev/null
+echo "restart ipc_server.socket"
+systemctl restart ipc_server.socket
 
-  daemon_reload_in_qm
+echo "restart ipc_server"
+systemctl restart ipc_server
 
-  echo "qm: systemctl restart ipc_server.socket"
-  podman exec -it qm bash -c "systemctl restart ipc_server.socket" &> /dev/null
+echo "restarting qm..."
+systemctl restart qm
+sleep 5
 
-  echo "qm: systemct status ipc_server.socket"
-  podman exec -it qm bash -c "systemctl status ipc_server.socket" &> /dev/null
+daemon_reload_in_qm
+check_container_exists
 
-  restart_ipc_client_in_qm
+echo "qm: systemctl status ipc_client"
+podman exec -it qm bash -c "systemctl status ipc_client"
+check_nested_container_exists "systemd-ipc_client"
 
-else
-  echo "systemctl daemon reload..."
-  systemctl daemon-reload
+restart_ipc_client_in_qm
 
-  echo "restart ipc_server.socket"
-  systemctl restart ipc_server.socket
-
-  echo "restart ipc_server"
-  systemctl restart ipc_server
-
-  echo "restarting qm..."
-  systemctl restart qm
-  sleep 5
-
-  daemon_reload_in_qm
-
-  echo "qm: systemctl status ipc_client"
-  podman exec -it qm bash -c "systemctl status ipc_client"
-
-  restart_ipc_client_in_qm
-
-  echo "qm: systemctl status ipc_client"
-  podman exec -it qm bash -c "systemctl status ipc_client"
-
-fi
+echo "qm: systemctl status ipc_client"
+podman exec -it qm bash -c "systemctl status ipc_client"
 
 show_qm_podman_ps
 check_ipc_client_logs

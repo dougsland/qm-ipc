@@ -129,6 +129,9 @@ echo "Creating $CLIENT"
 cat <<EOF > "$CLIENT"
 [Unit]
 Description=Demo client service container ($MODE)
+Requires=ipc_server.service
+After=ipc_server.service
+
 [Container]
 Image=quay.io/yarboa/ipc-demo/ipc_client:latest
 Network=none
