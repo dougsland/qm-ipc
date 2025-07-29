@@ -1,0 +1,23 @@
+QMQM_SOCKET=""
+QMQM_EXTRA_VOLUME=""
+QMQM_SERVER="/etc/qm/containers/systemd/ipc_server.container"
+QMQM_CLIENT="/etc/qm/containers/systemd/ipc_client.container"
+
+ASIL_SOCKET="/etc/systemd/system/ipc_server.socket"
+ASIL_SERVER="/etc/containers/systemd/ipc_server.container"
+ASIL_CLIENT="/etc/qm/containers/systemd/ipc_client.container"
+ASIL_EXTRA_VOLUME="/etc/containers/systemd/qm.container.d/10-extra-volume.conf"
+
+
+echo "Cleaning up qm-to-qm files..."
+rm -f "$QMQM_SOCKET $QMQM_SERVER $QMQM_CLIENT $QMQM_EXTRA_VOLUME"
+
+echo "Cleaning up asil-to-qm files..."
+rm -f "$ASIL_SOCKET" "$ASIL_SERVER" "$ASIL_CLIENT" "$ASIL_EXTRA_VOLUME"
+
+systemctl daemon-reload
+podman stop systemd-ipc_server &> /dev/null
+
+podman exec -it qm systemctl daemon-reload &>/dev/null
+podman exec -it qm systemctl stop ipc_client.service &> /dev/null
+podman exec -it qm systemctl stop ipc_server.service &> /dev/null
