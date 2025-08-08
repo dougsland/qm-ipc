@@ -21,3 +21,5 @@ podman stop systemd-ipc_server &> /dev/null
 podman exec -it qm systemctl daemon-reload &>/dev/null
 podman exec -it qm systemctl stop ipc_client.service &> /dev/null
 podman exec -it qm systemctl stop ipc_server.service &> /dev/null
+podman exec -it qm podman stop systemd-ipc_client &> /dev/null 
+podman exec -it qm podman stop systemd-ipc_server &> /dev/null 

@@ -155,7 +155,7 @@ Description=Demo server service container ($MODE)
 Requires=ipc_server.socket
 After=ipc_server.socket
 [Container]
-Image=quay.io/yarboa/ipc-demo/ipc_server
+Image=quay.io/qm-images/ipc/server
 Network=none
 $ENVIRONMENT
 Volume=$VOLUME_PATH
@@ -173,7 +173,7 @@ cat <<EOF > "$CLIENT"
 [Unit]
 Description=Demo client service container ($MODE)
 [Container]
-Image=quay.io/yarboa/ipc-demo/ipc_client:latest
+Image=quay.io/qm-images/ipc/client:latest
 Network=none
 $ENVIRONMENT
 Volume=$VOLUME_PATH

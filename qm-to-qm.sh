@@ -111,7 +111,7 @@ cat <<EOF > "$SERVER"
 [Unit]
 Description=Demo server service container ($MODE)
 [Container]
-Image=quay.io/yarboa/ipc-demo/ipc_server
+Image=quay.io/qm-images/ipc/server
 Network=none
 $ENVIRONMENT
 Volume=$VOLUME_PATH
@@ -133,7 +133,7 @@ Requires=ipc_server.service
 After=ipc_server.service
 
 [Container]
-Image=quay.io/yarboa/ipc-demo/ipc_client:latest
+Image=quay.io/qm-images/ipc/client:latest
 Network=none
 $ENVIRONMENT
 Volume=$VOLUME_PATH
